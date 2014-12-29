@@ -4,11 +4,8 @@
 #Usage: gabc2ly <number-of-sharps> <file>
 
 #TODO
-#Note groups - extra column to start or end slurs
-
-import os, sys, re, getopt, io, csv
-
-#Parameters
+#
+#add parameters...
 #for opt, arg in opts:
 #  opts, args = getopt.getopt(argv, "i:k")
 #    gabc_filename = arg
@@ -16,16 +13,8 @@ import os, sys, re, getopt, io, csv
 #    key_signature = int(arg)
 #  elif opt in ("-d"):
 #    adjust = int(arg)
-key_signature = sys.argv[1]
-semitone_adjust = sys.argv[2]
-gabc_filename = sys.argv[3]
 
-gabc_file = open(gabc_filename)
-ly_filename = gabc_filename.replace('gabc', 'gabc.ly')
-csv_filename = gabc_filename.replace('gabc', 'gabc.csv')
-
-gabcvalues = {"a":45, "b":47, "c":48, "d":50, "e":52, "f":53, "g":55, "h":57, "i":59, "j":60, "k":62, "l":64, "m":65, "A":45, "B":47, "C":48, "D":50, "E":52, "F":53, "G":55, "H":57, "I":59, "J":60, "K":62, "L":64, "M":65}
-'''
+''' Extra variables to incorporate...
 gabcnotes = "abcdefghijklm"
 episeme = '_'
 point = '.'
@@ -39,61 +28,64 @@ natural = "y"
 cut = '/ '
 '''
 
+import os, sys, re, getopt, io, csv
+
+#Parameters:
+sharps = int(sys.argv[1])
+semitone_adjust = sys.argv[2]
+gabc_filename = sys.argv[3]
+
+#Files:
+gabc_file = open(gabc_filename)
+ly_filename = gabc_filename.replace('gabc', 'gabc.ly')
+csv_filename = gabc_filename.replace('gabc', 'gabc.csv')
+
+#Variables:
+key_transpose = 7*sharps % 12
+if sharps < 0:
+  key_transpose -= 12
+gabcnotes = ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m","n", "o", "p", "q", "r", "s", "t")
+gabcnotes_caps = ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M")
+clef_adjust = {"c4":0, "c3":2, "c2":4, "c1":6, "f4":3, "f3":5, "f2":0, "f1":2}
+gabcvalues = {"a":45, "b":47, "c":48, "d":50, "e":52, "f":53, "g":55, "h":57, "i":59, "j":60, "k":62, "l":64, "m":65, "n":67, "o":69, "p":71, "q":72, "r":74, "s":76, "t":77}
 gabc_code = ''
-clef = ''
+clef = "c3" #Default for Gregorio
 flat = False
 
-def clef_adjust(clef):
-  x = 0
-  if clef[0] == 'f':
-    x += 3
-  if clef[1] == '3':
-    x += 3
-  if clef[1] == '2':
-    x += 7
-  if clef[1] == '1':
-    x += 11
-  return x
-
+#Get MIDI value of note
 def g2midi(note):
-  #TODO
-  #Add other modifiers
-  #Restrict flat to particular note, change true/false to "note"
-  #Try if x, flat = gabcnote; if y, or eow, flat = ''
   global flat
+  global clef
   gabcnote = note[0]
-  value = gabcvalues[gabcnote]
+  if re.match('[A-M]', note) is not None:
+    value = gabcnotes_caps.index(gabcnote)
+  else:
+    value = gabcnotes.index(gabcnote)
+  clef_value = clef_adjust[clef]
+  value += clef_value
   if len(note) >= 2:
     modifier = note[1]
     if modifier == "x":
       flat = True
     if modifier == "y":
       flat = False
-  return value
+  return gabcvalues[gabcnotes[value]] + key_transpose
 
-def transpose(value):
-  global clef
-  key = int(key_signature)
-  if key >= 0:
-    return int(value) + clef_adjust('clef') + (7*key%12)
-  else:
-    return int(value) + clef_adjust('clef') + (7*key%12) - 12
-
+#Convert MIDI valie to LilyPond value
 def lily(value):
   value = int(value)
   if flat == True:
     value -= 1
   o = int(value / 12) - 1
   n = int(value % 12)
-  if int(key_signature) >= 0:
+  if sharps >= 0:
     note = ('c', 'cis', 'd', 'dis', 'e', 'f', 'fis', 'g', 'gis', 'a', 'ais', 'b')[n]
   else:
     note = ('c', 'des', 'd', 'ees', 'e', 'f', 'ges', 'g', 'aes', 'a', 'bes', 'b')[n]
   note += (", , ", ", ", "", "'", "''", "'''", "''''")[o-1]
   return note
 
-#def adjust(value):
-
+#Bars and divisions
 def bar(sym):
   if "::" in sym:
     return "\\doubleBar"
@@ -106,10 +98,9 @@ def bar(sym):
   if "`" in sym:
     return ""
 
-print(lily("58"))
 ###########################################
 
-#Read in file, ignore headers
+#Read in GABC file, skip the headers
 offset = 0
 header_line = 1
 for line in gabc_file:
@@ -118,13 +109,13 @@ for line in gabc_file:
   if "%%" in line:
     header_line = 0
   
-#Convert to list
+#Convert to list of syllables (with notes)
 gabc_syllables = re.sub('(\([^\)]*\))([^ ])', '--\g<1>\g<2>', gabc_code)
 gabc_syllables = gabc_syllables.replace('\) \(','')
 gabc_syllables = gabc_syllables.replace(' ', '|')
 gabc_syllables = gabc_syllables.split(")")
 
-#Create list of syllables and notes
+#Separate out syllables and notes, write to CSV
 with open('output.csv', 'w') as out_file:
   for i,j in enumerate(gabc_syllables):
     k = j.split("(")
@@ -172,20 +163,20 @@ with open('output.csv','r') as gabc_table:
         clef = note
       elif re.match('[a-mA-M]', note) is not None:
         if 'w' in note:
-          midi = transpose(g2midi(note)) + clef_adjust(clef) + int(semitone_adjust)
+          midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\\prall\n")
         elif '~' in note:
-          midi = transpose(g2midi(note)) + clef_adjust(clef) + int(semitone_adjust)
+          midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + "\\tiny " + lily(midi) + " \\normalsize\n")
         if '//' in note:
-          midi = transpose(g2midi(note)) + clef_adjust(clef) + int(semitone_adjust)
+          midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1.5\t\t" + lily(midi) + "\n")
         elif 'x' in note:
           output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\n")
         elif 'y' in note:
           output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\n")
         else:
-          midi = transpose(g2midi(note)) + clef_adjust(clef) + int(semitone_adjust)
+          midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\n")
 #        output_csv.write(lyric + "\t" + note + "\t1\t\t" + adjust(midi) + "\n")
       elif re.match('[`,;:]', note) is not None:
