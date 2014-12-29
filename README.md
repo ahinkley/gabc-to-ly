@@ -10,5 +10,8 @@ Open the CSV manually and add the chords
 Convert the CSV to Lilypond
 	./csv2ly <file>
 
+This project borrows heavily from the GABC Toolkit
+	https://github.com/jperon/gabctk
+
 Known issues:
 The clef adjust adjusts semitones instead of notes.
