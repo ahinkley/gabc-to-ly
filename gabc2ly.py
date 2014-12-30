@@ -35,6 +35,10 @@ sharps = int(sys.argv[1])
 semitone_adjust = sys.argv[2]
 gabc_filename = sys.argv[3]
 
+#if #argv != 3:
+#  print("Usage: gabc2ly <number-of-sharps> <file>")
+
+
 #Files:
 gabc_file = open(gabc_filename)
 ly_filename = gabc_filename.replace('gabc', 'gabc.ly')
@@ -50,7 +54,15 @@ clef_adjust = {"c4":0, "c3":2, "c2":4, "c1":6, "f4":3, "f3":5, "f2":0, "f1":2}
 gabcvalues = {"a":45, "b":47, "c":48, "d":50, "e":52, "f":53, "g":55, "h":57, "i":59, "j":60, "k":62, "l":64, "m":65, "n":67, "o":69, "p":71, "q":72, "r":74, "s":76, "t":77}
 gabc_code = ''
 clef = "c3" #Default for Gregorio
-flat = False
+flat = ''
+
+def flatnote(note):
+  global flat
+  gabcnote = note
+  value = gabcnotes.index(gabcnote)
+  clef_value = clef_adjust[clef]
+  value += clef_value
+  flat = (gabcvalues[gabcnotes[value]] + key_transpose ) % 12
 
 #Get MIDI value of note
 def g2midi(note):
@@ -66,15 +78,15 @@ def g2midi(note):
   if len(note) >= 2:
     modifier = note[1]
     if modifier == "x":
-      flat = True
+      flatnote(gabcnote)
     if modifier == "y":
-      flat = False
+      flat = ''
   return gabcvalues[gabcnotes[value]] + key_transpose
 
-#Convert MIDI valie to LilyPond value
+#Convert MIDI value to LilyPond value
 def lily(value):
   value = int(value)
-  if flat == True:
+  if value % 12 == flat:
     value -= 1
   o = int(value / 12) - 1
   n = int(value % 12)
@@ -156,7 +168,7 @@ with open('output.csv','r') as gabc_table:
     for row in csv_table:
       lyric = row[0]
       if '|' in lyric:
-        flat = False
+        flat = ''
         lyric = re.sub('\|','',lyric)
       note = row[1]
       if re.match('[cf][1-4]', note) is not None:
@@ -168,17 +180,18 @@ with open('output.csv','r') as gabc_table:
         elif '~' in note:
           midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + "\\tiny " + lily(midi) + " \\normalsize\n")
-        if '//' in note:
+        elif '//' in note:
           midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1.5\t\t" + lily(midi) + "\n")
         elif 'x' in note:
+          flatnote(note[0])
           output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\n")
         elif 'y' in note:
+          flat = ''
           output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\n")
         else:
           midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\n")
-#        output_csv.write(lyric + "\t" + note + "\t1\t\t" + adjust(midi) + "\n")
       elif re.match('[`,;:]', note) is not None:
         output_csv.write(lyric + "\t" + note + "\t0\t\t" + bar(note) + "\n")
 
