@@ -4,7 +4,13 @@
 #Usage: gabc2ly <number-of-sharps> <file>
 
 #TODO
-#
+#vv shortcut -> x ~ x
+#Repeat loop if ij or iij 
+# - ij: repeat = 2, ij = ''
+# - iij repeat = 3, iij = ij
+#bug: *() doesn't show in of_deus_enim
+# () not taken into account?
+#subs: aé
 #add parameters...
 #for opt, arg in opts:
 #  opts, args = getopt.getopt(argv, "i:k")
@@ -30,14 +36,13 @@ cut = '/ '
 
 import os, sys, re, getopt, io, csv
 
+if len(sys.argv) != 4:
+  sys.exit("Usage: gabc2ly <number-of-sharps> <transpose (semitones)> <file>")
+
 #Parameters:
 sharps = int(sys.argv[1])
 semitone_adjust = sys.argv[2]
 gabc_filename = sys.argv[3]
-
-#if #argv != 3:
-#  print("Usage: gabc2ly <number-of-sharps> <file>")
-
 
 #Files:
 gabc_file = open(gabc_filename)
@@ -46,8 +51,8 @@ csv_filename = gabc_filename.replace('gabc', 'gabc.csv')
 
 #Variables:
 key_transpose = 7*sharps % 12
-if sharps < 0:
-  key_transpose -= 12
+#if sharps < 0:
+#  key_transpose -= 12
 gabcnotes = ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m","n", "o", "p", "q", "r", "s", "t")
 gabcnotes_caps = ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M")
 clef_adjust = {"c4":0, "c3":2, "c2":4, "c1":6, "f4":3, "f3":5, "f2":0, "f1":2}
@@ -55,6 +60,14 @@ gabcvalues = {"a":45, "b":47, "c":48, "d":50, "e":52, "f":53, "g":55, "h":57, "i
 gabc_code = ''
 clef = "c3" #Default for Gregorio
 flat = ''
+ly_title = ''
+ly_mode = ''
+ly_genre = ''
+
+#Key signature variables
+lastnote = ''
+lastmidi = 60
+mode = {0:"major", 2:"dorian", 4:"phrygian", 5:"lydian", 7:"mixolydian", 9:"minor", 11:"locrian"}
 
 def flatnote(note):
   global flat
@@ -90,7 +103,7 @@ def lily(value):
     value -= 1
   o = int(value / 12) - 1
   n = int(value % 12)
-  if sharps >= 0:
+  if sharps > 0:
     note = ('c', 'cis', 'd', 'dis', 'e', 'f', 'fis', 'g', 'gis', 'a', 'ais', 'b')[n]
   else:
     note = ('c', 'des', 'd', 'ees', 'e', 'f', 'ges', 'g', 'aes', 'a', 'bes', 'b')[n]
@@ -100,13 +113,17 @@ def lily(value):
 #Bars and divisions
 def bar(sym):
   if "::" in sym:
-    return "\\doubleBar"
+    return "\\finalis"
+#    return "\\doubleBar"
   if ":" in sym:
-    return "\\singleBar"
+    return "\\divisioMaxima"
+#    return "\\singleBar"
   if ";" in sym:
-    return "\\halfBar"
+    return "\\divisioMaior"
+#    return "\\halfBar"
   if "," in sym:
-    return "\\quarterBar"
+    return "\\divisioMinima"
+#    return "\\quarterBar"
   if "`" in sym:
     return ""
 
@@ -116,6 +133,22 @@ def bar(sym):
 offset = 0
 header_line = 1
 for line in gabc_file:
+  if re.match('^name:', line) is not None:
+    ly_title = line
+    ly_title = re.sub('^[^:]*:','', ly_title)
+    ly_title = re.sub(';$','', ly_title)
+    ly_title = re.sub('\n','', ly_title)
+  if re.match('^mode:', line) is not None:
+    ly_mode = line
+    ly_mode = re.sub('^[^:]*:','', ly_mode)
+    ly_mode = re.sub(';$','', ly_mode)
+    ly_mode = re.sub('\n','', ly_mode)
+  if re.match('^office-part:', line) is not None:
+    ly_genre = line
+    ly_genre = re.sub('^[^:]*:','', ly_genre)
+    ly_genre = re.sub(';$','', ly_genre)
+    ly_genre = re.sub('\n','', ly_genre)
+  
   if header_line == 0:
     gabc_code = gabc_code + line
   if "%%" in line:
@@ -139,6 +172,12 @@ with open('output.csv', 'w') as out_file:
             .replace('*', '&zwj;*')\
             .replace('<i>', '').replace('</i>', '')\
             .replace('<b>', '').replace('</b>', '')\
+            .replace('ae', 'æ')\
+            .replace('áe', 'ǽ')\
+            .replace('aé', 'ǽ')\
+            .replace('oe', 'œ')\
+            .replace('óe', 'œ́')\
+            .replace('oé', 'œ́')\
             .replace('<sp>R/</sp>', '℟')\
             .replace('<sp>V/</sp>', '℣')\
             .replace('<sp>ae</sp>', 'æ')\
@@ -153,18 +192,35 @@ with open('output.csv', 'w') as out_file:
             .replace('<sp>OE</sp>', 'Œ')\
             .replace("<sp>'OE</sp>", 'Œ́')\
             .replace("<sp>'Œ</sp>", 'Œ́')
-      notes = re.sub('([a-mA-M])([^a-mA-M]*)','\g<1>\g<2>\n\t',k[1])
+      notes = re.sub('([a-mA-M\.,;:])([^a-mA-M]*)','\g<1>\g<2>\n\t',k[1])
       notes = re.sub('\n\t$','',notes)
       out_file.write(lyric + "\t" + notes + '\n')
     except:
       pass
 out_file.close()
 
+
+#Determine key
+with open('output.csv','r') as gabc_table:
+  csv_table = csv.reader(gabc_table, delimiter='\t')
+  for row in csv_table:
+    note = row[1]
+    if re.match('[a-mA-M]', note) is not None:
+      midi = g2midi(note) + int(semitone_adjust)
+      lastnote = lily(midi)
+      lastnote = re.sub('\'','',lastnote)
+      lastmidi = midi
+gabc_table.close()
+key_mode_value = (lastmidi - 7*sharps) % 12
+key_mode = mode[key_mode_value]
+
 #Open csv, write full csv
 with open('output.csv','r') as gabc_table:
   with open('output2.csv','w') as output_csv:
-    output_csv.write("Syllable\tGABC\tMultiplier\tSlur\tS\tA\tT\tB\n")
     csv_table = csv.reader(gabc_table, delimiter='\t')
+    output_csv.write("Syllable\tGABC\tMultiplier\tSlur\tS\tA\tT\tB\t" + str(sharps) + " Sharps, Key = \t" + str(lastnote) + " \\" + str(key_mode) + "\t" + str(ly_title) + "\t" + str(ly_genre) + "\t" +  str(ly_mode) + "\t" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones.\n")
+    print(str(sharps) + " Sharps, Key = \n" + str(lastnote) + " \\" + str(key_mode) + "\n" + str(ly_title) + "\n" + str(ly_genre) + "\n" +  str(ly_mode) + "\n" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones.\n")
+    #Write the output file
     for row in csv_table:
       lyric = row[0]
       if '|' in lyric:
@@ -176,24 +232,27 @@ with open('output.csv','r') as gabc_table:
       elif re.match('[a-mA-M]', note) is not None:
         if 'w' in note:
           midi = g2midi(note) + int(semitone_adjust)
-          output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\\prall\n")
+          output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\\prall\t\t\t\n")
         elif '~' in note:
           midi = g2midi(note) + int(semitone_adjust)
-          output_csv.write(lyric + "\t" + note + "\t1\t\t" + "\\tiny " + lily(midi) + " \\normalsize\n")
+          output_csv.write(lyric + "\t" + note + "\t1\t\t" + "\\tiny " + lily(midi) + " \\normalsize\t\t\t\n")
         elif '//' in note:
           midi = g2midi(note) + int(semitone_adjust)
-          output_csv.write(lyric + "\t" + note + "\t1.5\t\t" + lily(midi) + "\n")
+          output_csv.write(lyric + "\t" + note + "\t1.5\t\t" + lily(midi) + "\t\t\t\n")
         elif 'x' in note:
           flatnote(note[0])
-          output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\n")
+          output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\t\t\t\n")
         elif 'y' in note:
           flat = ''
-          output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\n")
+          output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\t\t\t\n")
+        elif 'vv' in note:
+          output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
+          output_csv.write("\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
         else:
           midi = g2midi(note) + int(semitone_adjust)
-          output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\n")
+          output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
       elif re.match('[`,;:]', note) is not None:
-        output_csv.write(lyric + "\t" + note + "\t0\t\t" + bar(note) + "\n")
+        output_csv.write(lyric + "\t" + note + "\t0\t\t" + bar(note) + "\t\t\t\n")
 
 
     
