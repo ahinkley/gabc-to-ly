@@ -3,14 +3,15 @@
 
 #Usage: gabc2ly <number-of-sharps> <file>
 
-#TODO
+#TODO:
 #vv shortcut -> x ~ x
+#
 #Repeat loop if ij or iij 
 # - ij: repeat = 2, ij = ''
 # - iij repeat = 3, iij = ij
-#bug: *() doesn't show in of_deus_enim
-# () not taken into account?
-#subs: aé
+#
+#Handle clef changes
+#
 #add parameters...
 #for opt, arg in opts:
 #  opts, args = getopt.getopt(argv, "i:k")
@@ -196,6 +197,7 @@ with open('output.csv', 'w') as out_file:
       notes = re.sub('\n\t$','',notes)
       out_file.write(lyric + "\t" + notes + '\n')
     except:
+      #out_file.write("\t\n")
       pass
 out_file.close()
 
@@ -219,13 +221,14 @@ with open('output.csv','r') as gabc_table:
   with open('output2.csv','w') as output_csv:
     csv_table = csv.reader(gabc_table, delimiter='\t')
     output_csv.write("Syllable\tGABC\tMultiplier\tSlur\tS\tA\tT\tB\t" + str(sharps) + " Sharps, Key = \t" + str(lastnote) + " \\" + str(key_mode) + "\t" + str(ly_title) + "\t" + str(ly_genre) + "\t" +  str(ly_mode) + "\t" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones.\n")
-    print(str(sharps) + " Sharps, Key = \n" + str(lastnote) + " \\" + str(key_mode) + "\n" + str(ly_title) + "\n" + str(ly_genre) + "\n" +  str(ly_mode) + "\n" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones.\n")
+    print(str(sharps) + " Sharps, Key = \n" + str(lastnote) + " \\" + str(key_mode) + "\n" + str(ly_title) + "\n" + str(ly_genre) + "\n" +  str(ly_mode) + "\n" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones. Pageref pp:\t\n")
     #Write the output file
     for row in csv_table:
       lyric = row[0]
       if '|' in lyric:
         flat = ''
-        lyric = re.sub('\|','',lyric)
+        lyric = lyric.replace('|--','')
+        lyric = lyric.replace('|','')
       note = row[1]
       if re.match('[cf][1-4]', note) is not None:
         clef = note
@@ -253,6 +256,9 @@ with open('output.csv','r') as gabc_table:
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
       elif re.match('[`,;:]', note) is not None:
         output_csv.write(lyric + "\t" + note + "\t0\t\t" + bar(note) + "\t\t\t\n")
+      else:
+        output_csv.write(lyric + "\t\t0\t\t\t\t\t\n")
+
 
 
     

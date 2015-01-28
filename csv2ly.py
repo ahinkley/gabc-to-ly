@@ -30,11 +30,9 @@ try:
 except:
   ly_genre = ''
 try: 
-  ly_mode = header[12]
+  noh_page = header[13]
 except:
   ly_mode = ''
-#ly_ = header[9]
-
 
 ### Multiplier to notelength
 # Assume note is a minim. If integer, then note*beats/2. If non integer, then beats/4??
@@ -65,17 +63,21 @@ def lilynotelength(mult):
 ##     
 lyrics = ''
 soprano_score = ''
+soprano_prev_note = ''
 alto_score = ''
 alto_prev_note = ''
-alto_duration = 1
+alto_duration = 0
 tenor_score = ''
 tenor_prev_note = ''
-tenor_duration = 1
+tenor_duration = 0
 bass_score = ''
 bass_prev_note = ''
-bass_duration = 1
+bass_duration = 0
 slur = -1
 i = 0
+division = 0
+divison_marker = ''
+
 for row in csv_table:
   syllable = row[0]
   beats = row[2]
@@ -109,56 +111,58 @@ for row in csv_table:
     soprano_score += '\n'
   if "finalis" in soprano_note:
     soprano_score += '\n'
+  soprano_prev_note = soprano_note
 
   ##Alto
   alto_note = row[5]
   if alto_note != '':
     alto_total_duration = lilynotelength(str(alto_duration))
+    alto_score += alto_prev_note + alto_total_duration + ' '
     if alto_note == alto_prev_note:
       alto_score += '~ '
-    alto_prev_note = alto_note
-    alto_score += alto_note + alto_total_duration + ' '
+    if division == 1:
+      alto_score += divison_marker + '\n'
     alto_duration = float(beats)
+    alto_prev_note = alto_note
   else:
     alto_duration += float(beats)
-  if "divisio" in soprano_note:
-    alto_score += soprano_note + '\n'
-  if "finalis" in soprano_note:
-    alto_score += soprano_note + '\n'
 
   ##Tenor
   tenor_note = row[6]
   if tenor_note != '':
     tenor_total_duration = lilynotelength(str(tenor_duration))
+    tenor_score += tenor_prev_note + tenor_total_duration + ' '
     if tenor_note == tenor_prev_note:
       tenor_score += '~ '
-    tenor_prev_note = tenor_note
-    tenor_score += tenor_note + tenor_total_duration + ' '
+    if division == 1:
+      tenor_score += divison_marker + '\n'
     tenor_duration = float(beats)
+    tenor_prev_note = tenor_note
   else:
     tenor_duration += float(beats)
-  if "divisio" in soprano_note:
-    tenor_score += soprano_note + '\n'
-  if "finalis" in soprano_note:
-    tenor_score += soprano_note + '\n'
 
   ##Bass
   bass_note = row[7]
   if bass_note != '':
     bass_total_duration = lilynotelength(str(bass_duration))
+    bass_score += bass_prev_note + bass_total_duration + ' '
     if bass_note == bass_prev_note:
       bass_score += '~ '
-    bass_prev_note = bass_note
-    bass_score += bass_note + bass_total_duration + ' '
+    if division == 1:
+      bass_score += divison_marker + '\n'
     bass_duration = float(beats)
+    bass_prev_note = bass_note
   else:
     bass_duration += float(beats)
-  i = i + 1
-  if "divisio" in soprano_note:
-    bass_score += soprano_note + '\n'
-  if "finalis" in soprano_note:
-    bass_score += soprano_note + '\n'
 
+  i = i + 1
+  division = 0
+  if "divisio" in soprano_note:
+    division = 1
+    divison_marker = soprano_note
+  if "finalis" in soprano_note:
+    division = 1
+    divison_marker = soprano_note
 
 #TODO Add to gabctk: "0" for mult if soprano contains bar
 
@@ -177,6 +181,10 @@ lyrics = lyrics.replace('--', ' --')
 alto_score = alto_score.replace('2*2/2','2')
 tenor_score = tenor_score.replace('2*2/2','2')
 bass_score = bass_score.replace('2*2/2','2')
+#Replace 2*1/2 with 4
+alto_score = alto_score.replace('2*1/2','4')
+tenor_score = tenor_score.replace('2*1/2','4')
+bass_score = bass_score.replace('2*1/2','4')
 
 ##Write file
 #Fields: Name, mode, 
@@ -203,6 +211,9 @@ with open("template.ly", "rt") as ly_template:
       ly_file.write(line)
     elif 'GABC_MODE' in line:
       line = line.replace('GABC_MODE', str(ly_mode))
+      ly_file.write(line)
+    elif 'NOH_PAGE' in line:
+      line = line.replace('NOH_PAGE', str(noh_page))
       ly_file.write(line)
     else:
       ly_file.write(line)
