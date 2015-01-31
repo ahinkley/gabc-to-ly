@@ -8,6 +8,12 @@
 #
 #Repeat loop if ij or iij 
 # - ij: repeat = 2, ij = ''
+# gabc_code = re.sub('(from ^ to ij.)', '--\g<1>\g<1>', gabc_code)
+# remove \n from lines when reading gabc code??
+# For Kyrie compatibility:
+# - read in line,
+# - if ij or iij in line, sub in above
+# remove \n
 # - iij repeat = 3, iij = ij
 #
 #Handle clef changes
@@ -151,6 +157,11 @@ for line in gabc_file:
     ly_genre = re.sub('\n','', ly_genre)
   
   if header_line == 0:
+    line = line.replace('\n','')
+    if "ij." in line:
+      line = re.sub('^([^\*]*[^ ]*\s)','\g<1>\g<1>', line)
+    if "iij." in line:
+      line = re.sub('^([^\*]*[^ ]*\s)','\g<1>\g<1>\g<1>', line)
     gabc_code = gabc_code + line
   if "%%" in line:
     header_line = 0
@@ -220,7 +231,7 @@ key_mode = mode[key_mode_value]
 with open('output.csv','r') as gabc_table:
   with open('output2.csv','w') as output_csv:
     csv_table = csv.reader(gabc_table, delimiter='\t')
-    output_csv.write("Syllable\tGABC\tMultiplier\tSlur\tS\tA\tT\tB\t" + str(sharps) + " Sharps, Key = \t" + str(lastnote) + " \\" + str(key_mode) + "\t" + str(ly_title) + "\t" + str(ly_genre) + "\t" +  str(ly_mode) + "\t" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones.\n")
+    output_csv.write("Syllable\tGABC\tMultiplier\tSlur\tS\tA\tT\tB\t" + str(sharps) + " Sharps, Key = \t" + str(lastnote) + " \\" + str(key_mode) + "\t" + str(ly_title) + "\t" + str(ly_genre) + "\t" +  str(ly_mode) + "\t" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones. Pageref pp:\t\n")
     print(str(sharps) + " Sharps, Key = \n" + str(lastnote) + " \\" + str(key_mode) + "\n" + str(ly_title) + "\n" + str(ly_genre) + "\n" +  str(ly_mode) + "\n" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones. Pageref pp:\t\n")
     #Write the output file
     for row in csv_table:
