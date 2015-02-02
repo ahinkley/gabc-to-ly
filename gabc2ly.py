@@ -236,13 +236,17 @@ with open('output.csv','r') as gabc_table:
     #Write the output file
     for row in csv_table:
       lyric = row[0]
+      note = row[1]
       if '|' in lyric:
         flat = ''
         lyric = lyric.replace('|--','')
         lyric = lyric.replace('|','')
-      note = row[1]
       if re.match('[cf][1-4]', note) is not None:
         clef = note
+        if "::" in row[1]:
+          output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\\finalis" + "\t\t\t\n")
+        else:
+          output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\t" + "\t\t\t\n")
       elif re.match('[a-mA-M]', note) is not None:
         if 'w' in note:
           midi = g2midi(note) + int(semitone_adjust)
@@ -260,12 +264,13 @@ with open('output.csv','r') as gabc_table:
           flat = ''
           output_csv.write(lyric + "\t" + note + "\t0\t\t" + "\t\t\t\n")
         elif 'vv' in note:
+          midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
-          output_csv.write("\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
+          output_csv.write("\t" + "\t" + "\t1\t\t" + lily(midi) + "\t\t\t\n")
         else:
           midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
-      elif re.match('[`,;:]', note) is not None:
+      elif re.match('[z`,;:]', note) is not None:
         output_csv.write(lyric + "\t" + note + "\t0\t\t" + bar(note) + "\t\t\t\n")
       else:
         output_csv.write(lyric + "\t\t0\t\t\t\t\t\n")
