@@ -29,10 +29,14 @@ try:
   ly_genre = header[11]
 except:
   ly_genre = ''
+try:
+  ly_mode = header[12]
+except:
+  ly_mode = ''
 try: 
   noh_page = header[13]
 except:
-  ly_mode = ''
+  noh_page = ''
 
 ### Multiplier to notelength
 # Assume note is a minim. If integer, then note*beats/2. If non integer, then beats/4??
@@ -87,8 +91,8 @@ for row in csv_table:
   if syllable != '':
     lyrics += syllable + ' '
   if syllable == '':
-#    if row[3] != '':
-    if slur <= 0:
+    if row[3] != '':
+#    if slur <= 0:
       lyrics += '_ '
 
   ##Soprano
@@ -163,6 +167,11 @@ for row in csv_table:
   if "finalis" in soprano_note:
     division = 1
     divison_marker = soprano_note
+#Write last notes of chords
+alto_score += alto_prev_note + lilynotelength(str(alto_duration))
+tenor_score += tenor_prev_note + lilynotelength(str(tenor_duration))
+bass_score += bass_prev_note + lilynotelength(str(bass_duration))
+
 
 #TODO Add to gabctk: "0" for mult if soprano contains bar
 
@@ -185,6 +194,10 @@ bass_score = bass_score.replace('2*2/2','2')
 alto_score = alto_score.replace('2*1/2','4')
 tenor_score = tenor_score.replace('2*1/2','4')
 bass_score = bass_score.replace('2*1/2','4')
+#NOH uses minims for all "plural" lengths outside soprano line. (Instead of dotted quavers.)
+alto_score = alto_score.replace('4.','2*3/4')
+tenor_score = tenor_score.replace('4.','2*3/4')
+bass_score = bass_score.replace('4.','2*3/4')
 
 ##Write file
 #Fields: Name, mode, 
