@@ -17,6 +17,9 @@ The multiplier column specifies the length of the row in beats.
 
 The "slur" column is for the soprano line, eg "3" means the current line and the next two are slurred.
 
-Known issues:
-Can't handle clef changes yet.
+The first column after "B" is for the voice lines. Place an s, a, t, or b where the voice line starts and ends.
+The next column contains an "x" wherever a line break occurs in the original books.
 
+This project also borrows heavily from the Nova Organi Harmonia project.
+	https://github.com/CMAA/nova-organi-harmonia
+The file noh_test is based on noh.ily and is a work in progress, as the name implies.

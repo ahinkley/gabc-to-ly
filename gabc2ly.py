@@ -1,20 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 
-#Usage: gabc2ly <number-of-sharps> <file>
+#Usage: gabc2ly <number-of-sharps> <transpose (semitones)> <file> <page reference>
 
 #TODO:
 #vv shortcut -> x ~ x
 #
-#Repeat loop if ij or iij 
-# - ij: repeat = 2, ij = ''
-# gabc_code = re.sub('(from ^ to ij.)', '--\g<1>\g<1>', gabc_code)
 # remove \n from lines when reading gabc code??
-# For Kyrie compatibility:
-# - read in line,
-# - if ij or iij in line, sub in above
-# remove \n
-# - iij repeat = 3, iij = ij
 #
 #Handle clef changes
 #
@@ -43,13 +35,17 @@ cut = '/ '
 
 import os, sys, re, getopt, io, csv
 
-if len(sys.argv) != 4:
+#if len(sys.argv) != 4:
+if len(sys.argv) < 4:
   sys.exit("Usage: gabc2ly <number-of-sharps> <transpose (semitones)> <file>")
 
 #Parameters:
 sharps = int(sys.argv[1])
-semitone_adjust = sys.argv[2]
+semitone_adjust = int(sys.argv[2])
 gabc_filename = sys.argv[3]
+page_ref = sys.argv[4]
+
+print(page_ref)
 
 #Files:
 gabc_file = open(gabc_filename)
@@ -60,6 +56,11 @@ csv_filename = gabc_filename.replace('gabc', 'gabc.csv')
 key_transpose = 7*sharps % 12
 #if sharps < 0:
 #  key_transpose -= 12
+#if semitone_adjust >= 12 or semitone_adjust <= -12:
+if semitone_adjust not in range(-11,11):
+  semitone_adjust_12 = semitone_adjust % 12
+else:
+  semitone_adjust_12 = semitone_adjust
 gabcnotes = ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m","n", "o", "p", "q", "r", "s", "t")
 gabcnotes_caps = ("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M")
 clef_adjust = {"c4":0, "c3":2, "c2":4, "c1":6, "f4":3, "f3":5, "f2":0, "f1":2}
@@ -114,7 +115,7 @@ def lily(value):
     note = ('c', 'cis', 'd', 'dis', 'e', 'f', 'fis', 'g', 'gis', 'a', 'ais', 'b')[n]
   else:
     note = ('c', 'des', 'd', 'ees', 'e', 'f', 'ges', 'g', 'aes', 'a', 'bes', 'b')[n]
-  note += (", , ", ", ", "", "'", "''", "'''", "''''")[o-1]
+  note += (",, ", ", ", "", "'", "''", "'''", "''''")[o-1]
   return note
 
 #Bars and divisions
@@ -158,10 +159,33 @@ for line in gabc_file:
   
   if header_line == 0:
     line = line.replace('\n','')
-    if "ij." in line:
-      line = re.sub('^([^\*]*[^ ]*\s)','\g<1>\g<1>', line)
     if "iij." in line:
-      line = re.sub('^([^\*]*[^ ]*\s)','\g<1>\g<1>\g<1>', line)
+      #line = re.sub('^([^\*]*[^ ]*\s)','\g<1>\g<1>\g<1>', line)
+      #line = re.sub('^(.*)iij','\g<1>\g<1>\g<1>', line)
+      #Finalis wasn't appearing between repeats...
+      repeat = re.search('^(.*)iij\.', line)
+      repeat_string = repeat.group(1)
+      finalis_check = re.search("::",repeat_string)
+      if finalis_check is not None:
+        repeats = repeat_string + repeat_string + repeat_string
+      else:
+        repeat_string += " (::) "
+        repeats = repeat_string + repeat_string + repeat_string
+      line = re.sub('^(.*)iij\.', repeats, line)
+    elif "ij." in line:
+      #line = re.sub('^([^\*]*[^ ]*\s)','\g<1>\g<1>', line)
+      #line = re.sub('^(.*)ij','\g<1>\g<1>', line)
+      repeat = re.search('^(.*)ij\.', line)
+      repeat_string = repeat.group(1)
+      finalis_check = re.search("::",repeat_string)
+      if finalis_check is not None:
+        repeats = repeat_string + repeat_string
+      else:
+        #TODO Investigate: This was needed in the Kyriale but not elsewhere.
+        #repeat_string += " (::) "
+        repeats = repeat_string + repeat_string
+      print(str(repeats))
+      line = re.sub('^(.*)ij\.', repeats, line)
     gabc_code = gabc_code + line
   if "%%" in line:
     header_line = 0
@@ -224,14 +248,48 @@ with open('output.csv','r') as gabc_table:
       lastnote = re.sub('\'','',lastnote)
       lastmidi = midi
 gabc_table.close()
-key_mode_value = (lastmidi - 7*sharps) % 12
-key_mode = mode[key_mode_value]
+try:
+  key_mode_value = (lastmidi - 7*sharps) % 12
+  key_mode = mode[key_mode_value]
+except:
+  print("Error: Unable to determine key.")
+  key_mode = ''
+
+#find first note
+with open('output.csv','r') as gabc_table:
+  csv_table = csv.reader(gabc_table, delimiter='\t')
+  for row in csv_table:
+    note = row[1]
+    if re.match('[a-mA-M]', note) is not None:
+      if re.search('[1-4x]', note) is not None:
+        continue
+      else:
+        midi = g2midi(note) + int(semitone_adjust)
+        first_note = lily(midi)
+        first_note_midi = midi
+        first_note_gabc = note
+        break        
+gabc_table.close()
+print("First note is " + first_note + ", MIDI value: " + str(midi) + " GABC: " + first_note_gabc[0])
+#NOH Hack...
+if first_note_midi < 60 and -12 < int(semitone_adjust) < 12:
+  semitone_adjust += 12
+  print("Adjusted up one octave")
+elif first_note_midi > 72 and -12 < int(semitone_adjust) < 12:
+  semitone_adjust -= 12
+  print("Adjusted down one octave")
+else:
+  print("Octave not adjusted")
+
+#TODO
+#parameter to choose first_note
+#semitone_adjust = midi(desired_first_note) - midi(actual_first_note)
 
 #Open csv, write full csv
 with open('output.csv','r') as gabc_table:
   with open('output2.csv','w') as output_csv:
     csv_table = csv.reader(gabc_table, delimiter='\t')
-    output_csv.write("Syllable\tGABC\tMultiplier\tSlur\tS\tA\tT\tB\t" + str(sharps) + " Sharps, Key = \t" + str(lastnote) + " \\" + str(key_mode) + "\t" + str(ly_title) + "\t" + str(ly_genre) + "\t" +  str(ly_mode) + "\t" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones. Pageref pp:\t\n")
+    output_csv.write("Syllable\tGABC\tMultiplier\tSlur\tS\tA\tT\tB\t" + str(sharps) + " Sharps, Key = \t" + str(lastnote) + " \\" + str(key_mode) + "\t" + str(ly_title) + "\t" + str(ly_genre) + "\t" +  str(ly_mode) + "\t" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust % 12) + "(" + str((semitone_adjust % 12) - 12) + ")" + " semitones. Pageref pp:\tii." + str(page_ref) + "\n")
     print(str(sharps) + " Sharps, Key = \n" + str(lastnote) + " \\" + str(key_mode) + "\n" + str(ly_title) + "\n" + str(ly_genre) + "\n" +  str(ly_mode) + "\n" + "Gregorio clef: " + str(clef) + ", transposed " + str(semitone_adjust) + " semitones. Pageref pp:\t\n")
     #Write the output file
     for row in csv_table:
@@ -266,7 +324,7 @@ with open('output.csv','r') as gabc_table:
         elif 'vv' in note:
           midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
-          output_csv.write("\t" + "\t" + "\t1\t\t" + lily(midi) + "\t\t\t\n")
+          output_csv.write("\t\t1\t\t" + lily(midi) + "\t\t\t\n")
         else:
           midi = g2midi(note) + int(semitone_adjust)
           output_csv.write(lyric + "\t" + note + "\t1\t\t" + lily(midi) + "\t\t\t\n")
@@ -274,7 +332,8 @@ with open('output.csv','r') as gabc_table:
         output_csv.write(lyric + "\t" + note + "\t0\t\t" + bar(note) + "\t\t\t\n")
       else:
         output_csv.write(lyric + "\t\t0\t\t\t\t\t\n")
-
+    #end of file
+    #output_csv.write("\t\t1\t\t--end--\t--end--\t--end--\t--end--\n")
 
 
     
