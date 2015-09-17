@@ -17,8 +17,9 @@ The multiplier column specifies the length of the row in beats.
 
 The "slur" column is for the soprano line, eg "3" means the current line and the next two are slurred.
 
-The first column after "B" is for the voice lines. Place an s, a, t, or b where the voice line starts and ends.
-The next column contains an "x" wherever a line break occurs in the original books.
+The column after the bass, column I or row[9] contains the line breaks and rightshifts. If a coinciding note (with another voice) is shifted to the right, it is indicated with an s, a, t, or b, depending on which note is shifted. An "x" in the column means a line break in the original books. A "y" indicates the lyric is a verse number/marker.
+
+The next column after "B" is for the voice lines. Place an "s", "a", "t", or "b" where the voice line starts and ends.
 
 This project also borrows heavily from the Nova Organi Harmonia project.
 	https://github.com/CMAA/nova-organi-harmonia
