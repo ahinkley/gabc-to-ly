@@ -123,7 +123,7 @@ for row in csv_table:
     lyrics += syllable + ' '
   #Continue syllable
   if syllable == '':
-    if row[3] != '' and row[4] != soprano_prev_note:
+    if row[3] != '' and row[4] != soprano_prev_pitch:
       lyrics += '_ '
 
   ##Soprano
@@ -133,7 +133,7 @@ for row in csv_table:
   # \tiny \normalsize
   if "tiny" and "normalsize" in soprano_note:
     soprano_note = soprano_note.replace('\\normalsize','')
-    soprano_note = soprano_note.replace('\\tiny','\\once \\tweak #\'font-size #-6')
+    soprano_note = soprano_note.replace('\\tiny','\\once \\tweak #\'font-size #-4')
   if slur == 0:
     soprano_score += ')'
   slur -= 1
