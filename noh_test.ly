@@ -96,23 +96,24 @@ shiftRightB = { \once \override NoteColumn #'force-hshift = #1.6 }
   ragged-last = ##f
   \context {
     \Staff
+%    \with { \staffSize = #-3 }
+    %\override \StaffSize = #17
+    %fontSize = #-2
+    %\override StaffSymbol.staff-space = #(magstep -2)
+    %\override StaffSymbol.thickness = #(magstep -2)
     \remove "Time_signature_engraver"
     \omit Flag
     \omit Stem
     \accidentalStyle forget
-%    \remove "Mark_engraver"
-    %\override SpacingSpanner #'base-shortest-duration = #(ly:make-moment 1 16)
     \override Rest #'transparent = ##t
-%    \override Dots #'transparent = ##t
-%    barAlways = ##t
-%    defaultBarType = ""
   }
   \context {
     \Lyrics
     \with { alignAboveContext = "up" }
-    \override VerticalAxisGroup.nonstaff-relatedstaff-spacing #'minimum-distance = #4
-    \override LyricText #'font-size = #-1
-%    \override LyricSpace.minimum-distance = #5.0
+    \override VerticalAxisGroup.nonstaff-relatedstaff-spacing #'minimum-distance = #0
+    %\override LyricText #'font-size = #-2
+    \override LyricSpace.minimum-distance = #2.0
+    \override SpacingSpanner #'shortest-duration-space = #0
   }
 }
 

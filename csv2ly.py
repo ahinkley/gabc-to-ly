@@ -70,14 +70,22 @@ def lilynotelength(mult):
 lyrics = ''
 soprano_score = '\\tieDown '
 soprano_prev_note = ''
+soprano_pitch = ''
+soprano_prev_pitch = ''
 alto_score = ''
 alto_prev_note = ''
+alto_pitch = ''
+alto_prev_pitch = ''
 alto_duration = 0
 tenor_score = ''
 tenor_prev_note = ''
+tenor_pitch = ''
+tenor_prev_pitch = ''
 tenor_duration = 0
 bass_score = ''
 bass_prev_note = ''
+bass_pitch = ''
+bass_prev_pitch = ''
 bass_duration = 0
 voiceline = 0
 voiceline_score = ''
@@ -120,11 +128,16 @@ for row in csv_table:
 
   ##Soprano
   soprano_note = row[4]
-  x = row[3]
+  soprano_pitch = row[4]
+  #x = row[3]
+  # \tiny \normalsize
+  if "tiny" and "normalsize" in soprano_note:
+    soprano_note = soprano_note.replace('\\normalsize','')
+    soprano_note = soprano_note.replace('\\tiny','\\once \\tweak #\'font-size #-6')
   if slur == 0:
     soprano_score += ')'
   slur -= 1
-  if soprano_note == soprano_prev_note:
+  if soprano_pitch == soprano_prev_pitch:
     if row[0] == '' and row[3] != '':
       soprano_score += ' ~'
   if "\\" in soprano_note:
@@ -144,15 +157,17 @@ for row in csv_table:
   if "finalis" in soprano_note:
     soprano_score += '\n'
   soprano_prev_note = soprano_note 
+  soprano_prev_pitch = row[4]
   #Forced line breaks
 
   ##Alto
   ##TODO These should be separated out into a function
   alto_note = row[5]
+  alto_pitch = row[5]
   if alto_note != '':
     alto_total_duration = lilynotelength(str(alto_duration))
     alto_score += alto_prev_note + alto_total_duration + ' '
-    if alto_note == alto_prev_note and 'r' not in alto_note:
+    if alto_pitch == alto_prev_pitch and 'r' not in alto_note:
       alto_score += '~ '
     if "a" in tags:
       alto_note = '\\shiftRight ' + alto_note
@@ -162,6 +177,7 @@ for row in csv_table:
       alto_score += divison_marker + '\n'
     alto_duration = float(beats)
     alto_prev_note = alto_note
+    soprano_prev_pitch = alto_pitch
   else:
     alto_duration += float(beats)
   if voiceline_started == 'a' and alto_note != '':
@@ -174,10 +190,11 @@ for row in csv_table:
 
   ##Tenor
   tenor_note = row[6]
+  tenor_pitch = row[6]
   if tenor_note != '':
     tenor_total_duration = lilynotelength(str(tenor_duration))
     tenor_score += tenor_prev_note + tenor_total_duration + ' '
-    if tenor_note == tenor_prev_note and 'r' not in tenor_note:
+    if tenor_pitch == tenor_prev_pitch and 'r' not in tenor_note:
       tenor_score += '~ '
     if "t" in tags:
       tenor_note = '\\shiftRight ' + tenor_note
@@ -187,6 +204,7 @@ for row in csv_table:
       tenor_score += divison_marker + '\n'
     tenor_duration = float(beats)
     tenor_prev_note = tenor_note
+    tenor_prev_pitch = tenor_pitch
   else:
     tenor_duration += float(beats)
   if voiceline_started == 't' and tenor_note != '':
@@ -199,10 +217,11 @@ for row in csv_table:
 
   ##Bass
   bass_note = row[7]
+  bass_pitch = row[7]
   if bass_note != '':
     bass_total_duration = lilynotelength(str(bass_duration))
     bass_score += bass_prev_note + bass_total_duration + ' '
-    if bass_note == bass_prev_note and 'r' not in bass_note:
+    if bass_pitch == bass_prev_pitch and 'r' not in bass_note:
       bass_score += '~ '
     if "b" in tags:
       bass_note = '\\shiftRight ' + bass_note
@@ -212,6 +231,7 @@ for row in csv_table:
       bass_score += divison_marker + '\n'
     bass_duration = float(beats)
     bass_prev_note = bass_note
+    bass_prev_pitch = bass_pitch
   else:
     bass_duration += float(beats)
   if voiceline_started == 'b' and bass_note != '':

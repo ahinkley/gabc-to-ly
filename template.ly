@@ -57,6 +57,8 @@ bassMusic = {
 }
 
 voiceLines = {
+\voiceLineStyle
+
   VOICELINES
 }
 
@@ -95,6 +97,7 @@ voiceLines = {
     }
   >>
   \layout{
+  #(layout-set-staff-size 15)
   }
   \midi{
     \tempo 4 = 125
