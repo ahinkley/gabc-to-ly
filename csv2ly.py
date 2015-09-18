@@ -123,8 +123,9 @@ for row in csv_table:
     lyrics += syllable + ' '
   #Continue syllable
   if syllable == '':
-    if row[3] != '' and row[4] != soprano_prev_pitch:
+    if row[3] != '' and row[4] != soprano_prev_pitch and soprano_prev_pitch != '':
       lyrics += '_ '
+      print soprano_prev_pitch
 
   ##Soprano
   soprano_note = row[4]
