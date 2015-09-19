@@ -68,25 +68,34 @@ def lilynotelength(mult):
 ##TODO How to account for variable multiplier, esp. in row 2
 ##     
 lyrics = ''
+syllable = ''
+syllable_prev_row = ''
+beats = '0'
+beats_prev = '0'
+
 soprano_score = '\\tieDown '
 soprano_prev_note = ''
 soprano_pitch = ''
 soprano_prev_pitch = ''
+
 alto_score = ''
 alto_prev_note = ''
 alto_pitch = ''
 alto_prev_pitch = ''
 alto_duration = 0
+
 tenor_score = ''
 tenor_prev_note = ''
 tenor_pitch = ''
 tenor_prev_pitch = ''
 tenor_duration = 0
+
 bass_score = ''
 bass_prev_note = ''
 bass_pitch = ''
 bass_prev_pitch = ''
 bass_duration = 0
+
 voiceline = 0
 voiceline_score = ''
 voiceline_staffA = ''
@@ -98,12 +107,17 @@ voiceline_ended = 0
 voiceline_duration = 0
 voiceline_column = 0
 slur = -1
-i = 0
+i = 1
 division = 0
 divison_marker = ''
 
 for row in csv_table:
+  syllable_prev_row = syllable
   syllable = row[0]
+
+  gabc_note = row[1]
+
+  beats_prev = beats
   beats = row[2]
   duration = lilynotelength(beats)
 
@@ -121,11 +135,17 @@ for row in csv_table:
   #Add syllable
   if syllable != '':
     lyrics += syllable + ' '
-  #Continue syllable
+  #Continue syllable at start of slur (row[2] nonempty), if syllable blank (row[0] empty)   EXCEPT 
+  # and previous row not interrputed (prev S empty, prev syllable not)
   if syllable == '':
-    if row[3] != '' and row[4] != soprano_prev_pitch and soprano_prev_pitch != '':
-      lyrics += '_ '
-      print soprano_prev_pitch
+    if row[3] != '':
+      if beats_prev == '0' and syllable_prev_row != '':
+        print beats, beats_prev,i
+        lyrics += ''
+      else:
+        lyrics += '_ '
+ 
+    #if row[3] != '' and row[4] != soprano_prev_pitch and soprano_prev_pitch != '' and syllable_prev_row != '':
 
   ##Soprano
   soprano_note = row[4]
@@ -317,6 +337,7 @@ bass_score += bass_prev_note + lilynotelength(str(bass_duration)) + ' ' + diviso
 
 #Hacks...
 #lyrics = lyrics.replace('*', '&zwj;*')
+lyrics = lyrics.replace('&zwj;*&zwj;*', '\n\set stanza = " ** " ')
 lyrics = lyrics.replace('&zwj;* ', '\n\set stanza = " * " ')
 #soprano_score = soprano_score.replace('\\bar \"\"', '')
 #soprano_score = soprano_score.replace('\\bar \"\'\"', '\\quarterBar')
