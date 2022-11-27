@@ -198,7 +198,7 @@ for row in csv_table:
       alto_score += divison_marker + '\n'
     alto_duration = float(beats)
     alto_prev_note = alto_note
-    soprano_prev_pitch = alto_pitch
+    alto_prev_pitch = alto_pitch
   else:
     alto_duration += float(beats)
   if voiceline_started == 'a' and alto_note != '':
